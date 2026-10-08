@@ -148,10 +148,21 @@
         const cityUrl = 'https://raw.githubusercontent.com/shreyansh-k/taxigame/main/city.glb';
         const carUrl = 'https://raw.githubusercontent.com/shreyansh-k/taxigame/main/car.glb';
 
-     loader.load(cityUrl, gltf => {
-    city.add(gltf.scene);
-    setShadows(gltf.scene);
-    gltf.scene.traverse(object => { if (object.isMesh) colliders.push(object); });
+     const CITY_SCALE = 1; // raise or lower this if the city is too small or too big
+
+loader.load(cityUrl, gltf => {
+    const model = gltf.scene;
+    model.scale.setScalar(CITY_SCALE);
+
+    // Center the city on the origin and set its lowest point on the ground
+    const box = new THREE.Box3().setFromObject(model);
+    const center = box.getCenter(new THREE.Vector3());
+    console.log('city size', box.getSize(new THREE.Vector3()), 'min', box.min);
+    model.position.set(-center.x, -box.min.y, -center.z);
+
+    city.add(model);
+    setShadows(model);
+    model.traverse(object => { if (object.isMesh) colliders.push(object); });
     cityLoaded = true;
     document.querySelector('#message').textContent = 'CITY READY - FIND YOUR LINE';
 }, xhr => {
@@ -160,7 +171,6 @@
     console.error('city.glb failed:', err);
     document.querySelector('#message').textContent = 'CITY.GLB FAILED - SEE CONSOLE';
 });
-
         loader.load(carUrl, gltf => {
             carModel = gltf.scene;
             fitCar(carModel);
