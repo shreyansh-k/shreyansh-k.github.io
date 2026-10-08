@@ -146,15 +146,18 @@
         const cityUrl = 'https://raw.githubusercontent.com/shreyansh-k/taxigame/main/city.glb';
         const carUrl = 'https://raw.githubusercontent.com/shreyansh-k/taxigame/main/car.glb';
 
-        loader.load(cityUrl, gltf => {
-            city.add(gltf.scene);
-            setShadows(gltf.scene);
-            gltf.scene.traverse(object => { if (object.isMesh) colliders.push(object); });
-            cityLoaded = true;
-            document.querySelector('#message').textContent = 'CITY READY - FIND YOUR LINE';
-        }, undefined, () => {
-            document.querySelector('#message').textContent = 'CITY.GLB NOT FOUND - FALLBACK ROAD ACTIVE';
-        });
+     loader.load(cityUrl, gltf => {
+    city.add(gltf.scene);
+    setShadows(gltf.scene);
+    gltf.scene.traverse(object => { if (object.isMesh) colliders.push(object); });
+    cityLoaded = true;
+    document.querySelector('#message').textContent = 'CITY READY - FIND YOUR LINE';
+}, xhr => {
+    if (xhr.total) console.log(`city.glb ${Math.round(xhr.loaded / xhr.total * 100)}%`);
+}, err => {
+    console.error('city.glb failed:', err);
+    document.querySelector('#message').textContent = 'CITY.GLB FAILED - SEE CONSOLE';
+});
 
         loader.load(carUrl, gltf => {
             carModel = gltf.scene;
