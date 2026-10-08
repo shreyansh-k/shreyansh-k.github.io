@@ -55,8 +55,9 @@
         { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
     </script>
     <script type="module">
-        import * as THREE from 'three';
+       import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x7e9996);
@@ -78,6 +79,7 @@
         scene.add(sun);
 
         const loader = new GLTFLoader();
+        loader.setMeshoptDecoder(MeshoptDecoder);
         const city = new THREE.Group();
         scene.add(city);
         const car = new THREE.Group();
