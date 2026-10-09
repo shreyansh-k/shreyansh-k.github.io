@@ -55,7 +55,7 @@
         { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
     </script>
     <script type="module">
-       import * as THREE from 'three';
+        import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 
@@ -144,68 +144,46 @@
             return group;
         }
 
-
         const cityUrl = 'https://raw.githubusercontent.com/shreyansh-k/taxigame/main/city.glb';
         const carUrl = 'https://raw.githubusercontent.com/shreyansh-k/taxigame/main/car.glb';
 
-     const CITY_SCALE = 5; // raise or lower this if the city is too small or too big
+        const CITY_SCALE = 5;
 
-    loader.load(cityUrl, gltf => {
-    const model = gltf.scene;
+        loader.load(cityUrl, gltf => {
+            const model = gltf.scene;
+            model.scale.setScalar(CITY_SCALE);
 
-    // Reset transform baseline
-    model.rotation.set(0, 0, 0);
-    model.scale.setScalar(CITY_SCALE);
+            city.add(model);
+            setShadows(model);
 
-    // Set model position manually
-    // Adjust Y if the city floats in the sky (e.g. -10 or -50) or is buried under ground (+10 or +50)
-    const CITY_Y_OFFSET = 0; 
-    model.position.set(0, CITY_Y_OFFSET, 0);
+            model.traverse(object => { 
+                if (object.isMesh) {
+                    colliders.push(object); 
+                }
+            });
 
-    city.add(model);
-    setShadows(model);
+            // Calculate precise bounding box after scaling
+            model.updateMatrixWorld(true);
+            const box = new THREE.Box3().setFromObject(model);
+            const center = box.getCenter(new THREE.Vector3());
 
-    model.traverse(object => {
-        if (object.isMesh) {
-            colliders.push(object);
-        }
-    });
+            // Center horizontally and align base exactly with Y = 0
+            model.position.set(-center.x, -box.min.y, -center.z);
 
-    cityLoaded = true;
-    document.querySelector('#message').textContent = 'CITY READY - FIND YOUR LINE';
+            // Force recalculation for raycasting setup
+            city.updateMatrixWorld(true);
 
-    // Force snap car to road floor
-    snapCarToRoad();
-}, xhr => {
-    if (xhr.total) console.log(`city.glb ${Math.round(xhr.loaded / xhr.total * 100)}%`);
-}, err => {
-    console.error('city.glb failed:', err);
-    document.querySelector('#message').textContent = 'CITY.GLB FAILED - SEE CONSOLE';
-});
+            // Snap car onto the newly aligned road surface
+            snapCarToRoad();
 
-    city.add(model);
-    setShadows(model);
-
-    model.traverse(object => { 
-        if (object.isMesh) {
-            colliders.push(object); 
-        }
-    });
-
-    // 4. Update initial car position to sit right above the newly placed city floor
-    const initialFloor = getGroundY();
-    car.position.y = initialFloor + 0.65;
-    start.y = car.position.y;
-
-    cityLoaded = true;
-    document.querySelector('#message').textContent = 'CITY READY - FIND YOUR LINE';
-}, xhr => {
-    if (xhr.total) console.log(`city.glb ${Math.round(xhr.loaded / xhr.total * 100)}%`);
-}, err => {
-    console.error('city.glb failed:', err);
-    document.querySelector('#message').textContent = 'CITY.GLB FAILED - SEE CONSOLE';
-});
-
+            cityLoaded = true;
+            document.querySelector('#message').textContent = 'CITY READY - FIND YOUR LINE';
+        }, xhr => {
+            if (xhr.total) console.log(`city.glb ${Math.round(xhr.loaded / xhr.total * 100)}%`);
+        }, err => {
+            console.error('city.glb failed:', err);
+            document.querySelector('#message').textContent = 'CITY.GLB FAILED - SEE CONSOLE';
+        });
 
         loader.load(carUrl, gltf => {
             carModel = gltf.scene;
@@ -249,9 +227,19 @@
         }
 
         function getGroundY() {
-            groundRay.set(new THREE.Vector3(car.position.x, car.position.y + 30, car.position.z), down);
+            groundRay.set(new THREE.Vector3(car.position.x, car.position.y + 100, car.position.z), down);
             const hits = groundRay.intersectObjects([ground, ...city.children], true);
             return hits.length ? hits[0].point.y : 0;
+        }
+
+        function snapCarToRoad() {
+            const skyRay = new THREE.Raycaster(new THREE.Vector3(0, 500, 0), down);
+            const hits = skyRay.intersectObjects([ground, ...city.children], true);
+            if (hits.length > 0) {
+                const roadHeight = hits[0].point.y;
+                car.position.set(0, roadHeight + 0.65, 0);
+                start.copy(car.position);
+            }
         }
 
         function damageCheck() {
@@ -290,7 +278,7 @@
             car.position.x += Math.sin(state.heading) * distance;
             car.position.z += Math.cos(state.heading) * distance;
             const floorY = getGroundY();
-            car.position.y = THREE.MathUtils.damp(car.position.y, floorY, 18, dt);
+            car.position.y = THREE.MathUtils.damp(car.position.y, floorY + 0.65, 18, dt);
             car.rotation.y = state.heading;
             car.rotation.z = THREE.MathUtils.damp(car.rotation.z, -state.steer * speedFactor * .12, 8, dt);
             damageCheck();
@@ -305,7 +293,6 @@
             document.querySelector('#damage').style.color = state.damage > 70 ? '#ff6961' : '#7ee2aa';
         }
 
-        // REPLACE your existing updateCamera function with this single copy:
         function updateCamera(dt) {
             const offset = cameraMode ? new THREE.Vector3(0, 1.75, 2.5) : new THREE.Vector3(0, 4.6, 10.5);
             offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), state.heading);
