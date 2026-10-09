@@ -150,23 +150,38 @@
 
      const CITY_SCALE = 5; // raise or lower this if the city is too small or too big
 
-                loader.load(cityUrl, gltf => {
+    loader.load(cityUrl, gltf => {
     const model = gltf.scene;
+
+    // Reset transform baseline
+    model.rotation.set(0, 0, 0);
     model.scale.setScalar(CITY_SCALE);
 
-    // 1. Force transformation updates to get accurate bounds
-    model.updateMatrixWorld(true);
+    // Set model position manually
+    // Adjust Y if the city floats in the sky (e.g. -10 or -50) or is buried under ground (+10 or +50)
+    const CITY_Y_OFFSET = 0; 
+    model.position.set(0, CITY_Y_OFFSET, 0);
 
-    // 2. Compute bounding box and center point
-    const box = new THREE.Box3().setFromObject(model);
-    const center = box.getCenter(new THREE.Vector3());
+    city.add(model);
+    setShadows(model);
 
-    // 3. Align base (box.min.y) exactly to ground level (Y = 0) and center on X/Z
-    model.position.set(
-        -center.x,
-        -box.min.y, 
-        -center.z
-    );
+    model.traverse(object => {
+        if (object.isMesh) {
+            colliders.push(object);
+        }
+    });
+
+    cityLoaded = true;
+    document.querySelector('#message').textContent = 'CITY READY - FIND YOUR LINE';
+
+    // Force snap car to road floor
+    snapCarToRoad();
+}, xhr => {
+    if (xhr.total) console.log(`city.glb ${Math.round(xhr.loaded / xhr.total * 100)}%`);
+}, err => {
+    console.error('city.glb failed:', err);
+    document.querySelector('#message').textContent = 'CITY.GLB FAILED - SEE CONSOLE';
+});
 
     city.add(model);
     setShadows(model);
