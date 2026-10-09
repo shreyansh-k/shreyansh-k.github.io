@@ -151,29 +151,45 @@
      const CITY_SCALE = 5; // raise or lower this if the city is too small or too big
 
                 loader.load(cityUrl, gltf => {
-            const model = gltf.scene;
-            model.scale.setScalar(CITY_SCALE);
+    const model = gltf.scene;
+    model.scale.setScalar(CITY_SCALE);
 
-            // 1. Calculate the exact physical bounding box of the city model
-            const box = new THREE.Box3().setFromObject(model);
-            const center = box.getCenter(new THREE.Vector3());
-            
-            // 2. Center the geometry on the X and Z plane, and snap its base floor to Y = 0
-            // This mirrors the fallback road's properties perfectly at the origin.
-            model.position.set(-center.x, -box.min.y, -center.z);
-            model.rotation.set(0, 0, 0);
+    // 1. Force transformation updates to get accurate bounds
+    model.updateMatrixWorld(true);
 
-            city.add(model);
-            setShadows(model);
-            model.traverse(object => { if (object.isMesh) colliders.push(object); });
-            cityLoaded = true;
-            document.querySelector('#message').textContent = 'CITY READY - FIND YOUR LINE';
-        }, xhr => {
-            if (xhr.total) console.log(`city.glb ${Math.round(xhr.loaded / xhr.total * 100)}%`);
-        }, err => {
-            console.error('city.glb failed:', err);
-            document.querySelector('#message').textContent = 'CITY.GLB FAILED - SEE CONSOLE';
-        });
+    // 2. Compute bounding box and center point
+    const box = new THREE.Box3().setFromObject(model);
+    const center = box.getCenter(new THREE.Vector3());
+
+    // 3. Align base (box.min.y) exactly to ground level (Y = 0) and center on X/Z
+    model.position.set(
+        -center.x,
+        -box.min.y, 
+        -center.z
+    );
+
+    city.add(model);
+    setShadows(model);
+
+    model.traverse(object => { 
+        if (object.isMesh) {
+            colliders.push(object); 
+        }
+    });
+
+    // 4. Update initial car position to sit right above the newly placed city floor
+    const initialFloor = getGroundY();
+    car.position.y = initialFloor + 0.65;
+    start.y = car.position.y;
+
+    cityLoaded = true;
+    document.querySelector('#message').textContent = 'CITY READY - FIND YOUR LINE';
+}, xhr => {
+    if (xhr.total) console.log(`city.glb ${Math.round(xhr.loaded / xhr.total * 100)}%`);
+}, err => {
+    console.error('city.glb failed:', err);
+    document.querySelector('#message').textContent = 'CITY.GLB FAILED - SEE CONSOLE';
+});
 
 
         loader.load(carUrl, gltf => {
