@@ -150,25 +150,27 @@
 
      const CITY_SCALE = 1; // raise or lower this if the city is too small or too big
 
-loader.load(cityUrl, gltf => {
-    const model = gltf.scene;
-    model.scale.setScalar(CITY_SCALE);
+        loader.load(cityUrl, gltf => {
+            const model = gltf.scene;
+            model.scale.setScalar(CITY_SCALE);
 
-    // Apply the exact rotation, x, y, and z properties of the fallback road
-    model.rotation.x = -Math.PI / 2;
-    model.position.set(0, 0, 0); // Explicitly aligns with ground position defaults
+            // Keeps the city in its correct, right-side-up base rotation
+            // while matching the clean (0,0,0) placement properties of the ground.
+            model.position.set(0, 0, 0);
+            model.rotation.set(0, 0, 0);
 
-    city.add(model);
-    setShadows(model);
-    model.traverse(object => { if (object.isMesh) colliders.push(object); });
-    cityLoaded = true;
-    document.querySelector('#message').textContent = 'CITY READY - FIND YOUR LINE';
-}, xhr => {
-    if (xhr.total) console.log(`city.glb ${Math.round(xhr.loaded / xhr.total * 100)}%`);
-}, err => {
-    console.error('city.glb failed:', err);
-    document.querySelector('#message').textContent = 'CITY.GLB FAILED - SEE CONSOLE';
-});
+            city.add(model);
+            setShadows(model);
+            model.traverse(object => { if (object.isMesh) colliders.push(object); });
+            cityLoaded = true;
+            document.querySelector('#message').textContent = 'CITY READY - FIND YOUR LINE';
+        }, xhr => {
+            if (xhr.total) console.log(`city.glb ${Math.round(xhr.loaded / xhr.total * 100)}%`);
+        }, err => {
+            console.error('city.glb failed:', err);
+            document.querySelector('#message').textContent = 'CITY.GLB FAILED - SEE CONSOLE';
+        });
+
         loader.load(carUrl, gltf => {
             carModel = gltf.scene;
             fitCar(carModel);
