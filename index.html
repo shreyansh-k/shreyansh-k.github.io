@@ -148,15 +148,19 @@
         const cityUrl = 'https://raw.githubusercontent.com/shreyansh-k/taxigame/main/city.glb';
         const carUrl = 'https://raw.githubusercontent.com/shreyansh-k/taxigame/main/car.glb';
 
-     const CITY_SCALE = 1; // raise or lower this if the city is too small or too big
+     const CITY_SCALE = 5; // raise or lower this if the city is too small or too big
 
-        loader.load(cityUrl, gltf => {
+                loader.load(cityUrl, gltf => {
             const model = gltf.scene;
             model.scale.setScalar(CITY_SCALE);
 
-            // Keeps the city in its correct, right-side-up base rotation
-            // while matching the clean (0,0,0) placement properties of the ground.
-            model.position.set(0, 0, 0);
+            // 1. Calculate the exact physical bounding box of the city model
+            const box = new THREE.Box3().setFromObject(model);
+            const center = box.getCenter(new THREE.Vector3());
+            
+            // 2. Center the geometry on the X and Z plane, and snap its base floor to Y = 0
+            // This mirrors the fallback road's properties perfectly at the origin.
+            model.position.set(-center.x, -box.min.y, -center.z);
             model.rotation.set(0, 0, 0);
 
             city.add(model);
@@ -170,6 +174,7 @@
             console.error('city.glb failed:', err);
             document.querySelector('#message').textContent = 'CITY.GLB FAILED - SEE CONSOLE';
         });
+
 
         loader.load(carUrl, gltf => {
             carModel = gltf.scene;
