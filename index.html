@@ -154,11 +154,9 @@ loader.load(cityUrl, gltf => {
     const model = gltf.scene;
     model.scale.setScalar(CITY_SCALE);
 
-    // Center the city on the origin and set its lowest point on the ground
-    const box = new THREE.Box3().setFromObject(model);
-    const center = box.getCenter(new THREE.Vector3());
-    console.log('city size', box.getSize(new THREE.Vector3()), 'min', box.min);
-    model.position.set(-center.x, -box.min.y, -center.z);
+    // Apply the exact rotation, x, y, and z properties of the fallback road
+    model.rotation.x = -Math.PI / 2;
+    model.position.set(0, 0, 0); // Explicitly aligns with ground position defaults
 
     city.add(model);
     setShadows(model);
